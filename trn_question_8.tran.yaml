@@ -1,0 +1,151 @@
+type: "transformation"
+version: "1.0"
+pipeline:
+  components:
+    ORDERS:
+      type: "table-input"
+      parameters:
+        componentName: "ORDERS"
+        database: "PRACTICE"
+        schema: "PRACTICE_SCHEMA"
+        targetTable: "ORDERS"
+        columnNames:
+        - "ORDER_ID"
+        - "ORDER_DATE"
+        - "SHIP_DATE"
+        - "SHIP_MODE"
+        - "CUSTOMER_ID"
+        - "CUSTOMER_NAME"
+        - "SEGMENT"
+        - "COUNTRY"
+        - "CITY"
+        - "STATE"
+        - "POSTAL_CODE"
+        - "REGION"
+        - "PRODUCT_ID"
+        - "CATEGORY"
+        - "SUB_CATEGORY"
+        - "PRODUCT_NAME"
+        - "SALES"
+        - "QUANTITY"
+        - "DISCOUNT"
+        - "PROFIT"
+        timeOffset:
+    Aggregate:
+      type: "aggregate"
+      sources:
+      - "ORDERS"
+      parameters:
+        componentName: "Aggregate"
+        groupings:
+        - "PRODUCT_ID"
+        aggregations:
+        - - "SALES"
+          - "Sum"
+        groupingType: "Group By"
+    Calculator:
+      type: "calculator"
+      sources:
+      - "ORDERS"
+      parameters:
+        componentName: "Calculator"
+        includeInputColumns: "No"
+        calculations:
+        - - "ROUND((SUM(\"SALES\"))*80/100,2)"
+          - "80_PERCENT_SALE"
+    Window Calculation:
+      type: "window-calculation"
+      sources:
+      - "Aggregate"
+      parameters:
+        componentName: "Window Calculation"
+        includeInputColumns: "Yes"
+        partitionData:
+        orderingWithinPartitions:
+        - - "sum_SALES"
+          - "Descending"
+        functions:
+        - - "Sum"
+          - "sum_SALES"
+          - "RUNNING_SALES"
+        lowerBound: "unbounded preceding"
+        upperBound: "current row"
+    Join:
+      type: "join"
+      sources:
+      - "Window Calculation"
+      - "Calculator"
+      parameters:
+        componentName: "Join"
+        mainTable: "Window Calculation"
+        mainTableAlias: "W"
+        joins:
+        - - "Calculator"
+          - "C"
+          - "Full"
+        joinExpressions:
+        - - "1=1"
+          - "W_Full_C"
+        columnMappings:
+        - - "W.PRODUCT_ID"
+          - "PRODUCT_ID"
+        - - "W.sum_SALES"
+          - "sum_SALES"
+        - - "W.RUNNING_SALES"
+          - "RUNNING_SALES"
+        - - "C.80_PERCENT_SALE"
+          - "80_PERCENT_SALE"
+    Filter:
+      type: "filter"
+      sources:
+      - "Join"
+      parameters:
+        componentName: "Filter"
+        filterConditions:
+        - - "RUNNING_SALES"
+          - "Is"
+          - "Less than or equal to"
+          - "\"80_PERCENT_SALE\""
+        combineCondition: "And"
+design:
+  components:
+    ORDERS:
+      position:
+        x: -170
+        "y": -60
+      tempMetlId: 1
+    Aggregate:
+      position:
+        x: -10
+        "y": -60
+      tempMetlId: 2
+    Calculator:
+      position:
+        x: -10
+        "y": -180
+      tempMetlId: 3
+    Window Calculation:
+      position:
+        x: 150
+        "y": -60
+      tempMetlId: 4
+    Join:
+      position:
+        x: 310
+        "y": -60
+      tempMetlId: 5
+    Filter:
+      position:
+        x: 470
+        "y": -60
+      tempMetlId: 6
+  notes:
+    "1":
+      position:
+        x: -220
+        "y": -250
+      size:
+        height: 318
+        width: 890
+      theme: "white"
+      content: "Find the products which are contributing 80% of the total sales."
