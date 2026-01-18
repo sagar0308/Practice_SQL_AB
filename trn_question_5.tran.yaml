@@ -1,0 +1,144 @@
+type: "transformation"
+version: "1.0"
+pipeline:
+  components:
+    EMP_COMPENSATION:
+      type: "table-input"
+      parameters:
+        componentName: "EMP_COMPENSATION"
+        database: "PRACTICE"
+        schema: "PRACTICE_SCHEMA"
+        targetTable: "EMP_COMPENSATION"
+        columnNames:
+        - "EMP_ID"
+        - "SALARY_COMPONENT_TYPE"
+        - "VAL"
+        timeOffset:
+    SQL:
+      type: "sql"
+      sources:
+      - "EMP_COMPENSATION"
+      parameters:
+        componentName: "SQL"
+        query: "SELECT *,\r\nCASE WHEN SALARY_COMPONENT_TYPE = 'salary' THEN VAL END\
+          \ AS SALARY,\r\nCASE WHEN SALARY_COMPONENT_TYPE = 'bonus' THEN VAL END AS\
+          \ BONUS,\r\nCASE WHEN SALARY_COMPONENT_TYPE = 'hike_percent' THEN VAL END\
+          \ AS HIKE_PERCENT\r\nFROM (SELECT \r\n  \"EMP_ID\", \r\n  \"SALARY_COMPONENT_TYPE\"\
+          , \r\n  \"VAL\" \r\nFROM \"PRACTICE\".\"PRACTICE_SCHEMA\".\"EMP_COMPENSATION\"\
+          )"
+    Aggregate:
+      type: "aggregate"
+      sources:
+      - "SQL"
+      parameters:
+        componentName: "Aggregate"
+        groupings:
+        - "EMP_ID"
+        aggregations:
+        - - "SALARY"
+          - "Min"
+        - - "BONUS"
+          - "Min"
+        - - "HIKE_PERCENT"
+          - "Min"
+        groupingType: "Group By"
+    Rename PIVOT DATA:
+      type: "rename"
+      sources:
+      - "Aggregate"
+      parameters:
+        componentName: "Rename PIVOT DATA"
+        columnMapping:
+        - - "EMP_ID"
+          - "EMP_ID"
+        - - "min_SALARY"
+          - "SALARY"
+        - - "min_BONUS"
+          - "BONUS"
+        - - "min_HIKE_PERCENT"
+          - "HIKE_PERCENT"
+        includeInputColumns: "No"
+    SQL UNPIVOT DATA:
+      type: "sql"
+      sources:
+      - "Rename PIVOT DATA"
+      parameters:
+        componentName: "SQL UNPIVOT DATA"
+        query: "SELECT EMP_ID, \r\n'salary' as SALARY_COMPONENT_TYPE,\r\nSALARY AS\
+          \ VAL\r\nFROM (SELECT \r\n  \"EMP_ID\" AS \"EMP_ID\", \r\n  \"min_SALARY\"\
+          \ AS \"SALARY\", \r\n  \"min_BONUS\" AS \"BONUS\", \r\n  \"min_HIKE_PERCENT\"\
+          \ AS \"HIKE_PERCENT\" \r\nFROM (SELECT \r\n  MIN(\"SALARY\") AS \"min_SALARY\"\
+          , \r\n  MIN(\"BONUS\") AS \"min_BONUS\", \r\n  MIN(\"HIKE_PERCENT\") AS\
+          \ \"min_HIKE_PERCENT\", \r\n  \"EMP_ID\" \r\nFROM (SELECT \r\n  \"EMP_ID\"\
+          , \r\n  \"SALARY_COMPONENT_TYPE\", \r\n  \"VAL\", \r\n  \"SALARY\", \r\n\
+          \  \"BONUS\", \r\n  \"HIKE_PERCENT\" \r\nFROM (SELECT *,\r\nCASE WHEN SALARY_COMPONENT_TYPE\
+          \ = 'salary' THEN VAL END AS SALARY,\r\nCASE WHEN SALARY_COMPONENT_TYPE\
+          \ = 'bonus' THEN VAL END AS BONUS,\r\nCASE WHEN SALARY_COMPONENT_TYPE =\
+          \ 'hike_percent' THEN VAL END AS HIKE_PERCENT\r\nFROM (SELECT \r\n  \"EMP_ID\"\
+          , \r\n  \"SALARY_COMPONENT_TYPE\", \r\n  \"VAL\" \r\nFROM \"PRACTICE\".\"\
+          PRACTICE_SCHEMA\".\"EMP_COMPENSATION\"))) \r\nGROUP BY (\"EMP_ID\")))\r\n\
+          UNION ALL \r\nSELECT EMP_ID, \r\n'bonus' as SALARY_COMPONENT_TYPE,\r\nBONUS\
+          \ AS VAL \r\nFROM (SELECT \r\n  \"EMP_ID\" AS \"EMP_ID\", \r\n  \"min_SALARY\"\
+          \ AS \"SALARY\", \r\n  \"min_BONUS\" AS \"BONUS\", \r\n  \"min_HIKE_PERCENT\"\
+          \ AS \"HIKE_PERCENT\" \r\nFROM (SELECT \r\n  MIN(\"SALARY\") AS \"min_SALARY\"\
+          , \r\n  MIN(\"BONUS\") AS \"min_BONUS\", \r\n  MIN(\"HIKE_PERCENT\") AS\
+          \ \"min_HIKE_PERCENT\", \r\n  \"EMP_ID\" \r\nFROM (SELECT \r\n  \"EMP_ID\"\
+          , \r\n  \"SALARY_COMPONENT_TYPE\", \r\n  \"VAL\", \r\n  \"SALARY\", \r\n\
+          \  \"BONUS\", \r\n  \"HIKE_PERCENT\" \r\nFROM (SELECT *,\r\nCASE WHEN SALARY_COMPONENT_TYPE\
+          \ = 'salary' THEN VAL END AS SALARY,\r\nCASE WHEN SALARY_COMPONENT_TYPE\
+          \ = 'bonus' THEN VAL END AS BONUS,\r\nCASE WHEN SALARY_COMPONENT_TYPE =\
+          \ 'hike_percent' THEN VAL END AS HIKE_PERCENT\r\nFROM (SELECT \r\n  \"EMP_ID\"\
+          , \r\n  \"SALARY_COMPONENT_TYPE\", \r\n  \"VAL\" \r\nFROM \"PRACTICE\".\"\
+          PRACTICE_SCHEMA\".\"EMP_COMPENSATION\"))) \r\nGROUP BY (\"EMP_ID\")))\r\n\
+          UNION ALL \r\nSELECT EMP_ID,\r\n'hike_percent' as SALARY_COMPONENT_TYPE,\r\
+          \nHIKE_PERCENT AS VAL\r\nFROM (SELECT \r\n  \"EMP_ID\" AS \"EMP_ID\", \r\
+          \n  \"min_SALARY\" AS \"SALARY\", \r\n  \"min_BONUS\" AS \"BONUS\", \r\n\
+          \  \"min_HIKE_PERCENT\" AS \"HIKE_PERCENT\" \r\nFROM (SELECT \r\n  MIN(\"\
+          SALARY\") AS \"min_SALARY\", \r\n  MIN(\"BONUS\") AS \"min_BONUS\", \r\n\
+          \  MIN(\"HIKE_PERCENT\") AS \"min_HIKE_PERCENT\", \r\n  \"EMP_ID\" \r\n\
+          FROM (SELECT \r\n  \"EMP_ID\", \r\n  \"SALARY_COMPONENT_TYPE\", \r\n  \"\
+          VAL\", \r\n  \"SALARY\", \r\n  \"BONUS\", \r\n  \"HIKE_PERCENT\" \r\nFROM\
+          \ (SELECT *,\r\nCASE WHEN SALARY_COMPONENT_TYPE = 'salary' THEN VAL END\
+          \ AS SALARY,\r\nCASE WHEN SALARY_COMPONENT_TYPE = 'bonus' THEN VAL END AS\
+          \ BONUS,\r\nCASE WHEN SALARY_COMPONENT_TYPE = 'hike_percent' THEN VAL END\
+          \ AS HIKE_PERCENT\r\nFROM (SELECT \r\n  \"EMP_ID\", \r\n  \"SALARY_COMPONENT_TYPE\"\
+          , \r\n  \"VAL\" \r\nFROM \"PRACTICE\".\"PRACTICE_SCHEMA\".\"EMP_COMPENSATION\"\
+          ))) \r\nGROUP BY (\"EMP_ID\")))"
+design:
+  components:
+    EMP_COMPENSATION:
+      position:
+        x: -220
+        "y": -40
+      tempMetlId: 1
+    SQL:
+      position:
+        x: -60
+        "y": -40
+      tempMetlId: 2
+    Aggregate:
+      position:
+        x: 100
+        "y": -40
+      tempMetlId: 3
+    Rename PIVOT DATA:
+      position:
+        x: 260
+        "y": -40
+      tempMetlId: 4
+    SQL UNPIVOT DATA:
+      position:
+        x: 420
+        "y": -40
+      tempMetlId: 5
+  notes:
+    "1":
+      position:
+        x: -340
+        "y": -150
+      size:
+        height: 228
+        width: 920
+      theme: "white"
+      content: "PIVOT & UNPIVOT DATA FROM THE TABLE. TO UNPIVOT THE DATA NEED TO USE\
+        \ UNION ALL. "
