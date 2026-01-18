@@ -1,0 +1,170 @@
+type: "transformation"
+version: "1.0"
+pipeline:
+  components:
+    CUSTOMER_ORDERS:
+      type: "table-input"
+      parameters:
+        componentName: "CUSTOMER_ORDERS"
+        database: "PRACTICE"
+        schema: "PRACTICE_SCHEMA"
+        targetTable: "CUSTOMER_ORDERS"
+        columnNames:
+        - "ORDER_ID"
+        - "CUSTOMER_ID"
+        - "ORDER_DATE"
+        - "ORDER_AMOUNT"
+        timeOffset:
+    First/Last:
+      type: "first-last"
+      sources:
+      - "CUSTOMER_ORDERS"
+      parameters:
+        componentName: "First/Last"
+        groupingColumns:
+        - "CUSTOMER_ID"
+        orderingInPartitions:
+        - - "ORDER_ID"
+          - "Ascending"
+        firstLastColumns:
+        - - "ORDER_DATE"
+          - "First"
+        ignoreNulls: "No"
+    CUSTOMER_ORDERS 2:
+      type: "table-input"
+      parameters:
+        componentName: "CUSTOMER_ORDERS 2"
+        database: "PRACTICE"
+        schema: "PRACTICE_SCHEMA"
+        targetTable: "CUSTOMER_ORDERS"
+        columnNames:
+        - "ORDER_ID"
+        - "CUSTOMER_ID"
+        - "ORDER_DATE"
+        - "ORDER_AMOUNT"
+        timeOffset:
+    Join:
+      type: "join"
+      sources:
+      - "First/Last"
+      - "CUSTOMER_ORDERS 2"
+      parameters:
+        componentName: "Join"
+        mainTable: "CUSTOMER_ORDERS 2"
+        mainTableAlias: "C"
+        joins:
+        - - "First/Last"
+          - "FL"
+          - "Left"
+        joinExpressions:
+        - - "\"C\".\"CUSTOMER_ID\"=\"FL\".\"CUSTOMER_ID\""
+          - "C_Left_FL"
+        columnMappings:
+        - - "C.ORDER_ID"
+          - "ORDER_ID"
+        - - "C.CUSTOMER_ID"
+          - "CUSTOMER_ID"
+        - - "C.ORDER_DATE"
+          - "ORDER_DATE"
+        - - "C.ORDER_AMOUNT"
+          - "ORDER_AMOUNT"
+        - - "FL.ORDER_DATE"
+          - "FIRST_ORDER_DATE"
+    SQL:
+      type: "sql"
+      sources:
+      - "Join"
+      parameters:
+        componentName: "SQL"
+        query: "SELECT *,\r\nCASE \r\n    WHEN ORDER_DATE = FIRST_ORDER_DATE \r\n\
+          \    THEN 1 ELSE 0\r\n    END AS FIRST_VISIT_FLAG,\r\nCASE \r\n    WHEN\
+          \ ORDER_DATE != FIRST_ORDER_DATE \r\n    THEN 1 ELSE 0\r\n    END AS REPEAT_VISIT_FLAG\r\
+          \nFROM (\r\n    SELECT \r\n  \"C\".\"ORDER_ID\" AS \"ORDER_ID\", \r\n  \"\
+          C\".\"CUSTOMER_ID\" AS \"CUSTOMER_ID\", \r\n  \"C\".\"ORDER_DATE\" AS \"\
+          ORDER_DATE\", \r\n  \"C\".\"ORDER_AMOUNT\" AS \"ORDER_AMOUNT\", \r\n  \"\
+          FL\".\"ORDER_DATE\" AS \"FIRST_ORDER_DATE\" \r\nFROM (SELECT \r\n  \"ORDER_ID\"\
+          , \r\n  \"CUSTOMER_ID\", \r\n  \"ORDER_DATE\", \r\n  \"ORDER_AMOUNT\" \r\
+          \nFROM \"PRACTICE\".\"PRACTICE_SCHEMA\".\"CUSTOMER_ORDERS\") AS \"C\" \r\
+          \n     LEFT OUTER JOIN \r\n     (SELECT DISTINCT \r\n  \"CUSTOMER_ID\",\
+          \ \r\n  FIRST_VALUE(\"ORDER_DATE\") OVER (PARTITION BY \"CUSTOMER_ID\" \r\
+          \n                                  ORDER BY \"ORDER_ID\" ASC \r\n     \
+          \                             ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED\
+          \ FOLLOWING) AS \"ORDER_DATE\" \r\nFROM (SELECT \r\n  \"ORDER_ID\", \r\n\
+          \  \"CUSTOMER_ID\", \r\n  \"ORDER_DATE\", \r\n  \"ORDER_AMOUNT\" \r\nFROM\
+          \ \"PRACTICE\".\"PRACTICE_SCHEMA\".\"CUSTOMER_ORDERS\")) AS \"FL\" \r\n\
+          \     ON \"C\".\"CUSTOMER_ID\"=\"FL\".\"CUSTOMER_ID\"\r\n)"
+    Aggregate:
+      type: "aggregate"
+      sources:
+      - "SQL"
+      parameters:
+        componentName: "Aggregate"
+        groupings:
+        - "ORDER_DATE"
+        aggregations:
+        - - "FIRST_VISIT_FLAG"
+          - "Sum"
+        - - "REPEAT_VISIT_FLAG"
+          - "Sum"
+        groupingType: "Group By"
+    Rename:
+      type: "rename"
+      sources:
+      - "Aggregate"
+      parameters:
+        componentName: "Rename"
+        columnMapping:
+        - - "ORDER_DATE"
+          - "ORDER_DATE"
+        - - "sum_FIRST_VISIT_FLAG"
+          - "FIRST_VISIT_FLAG"
+        - - "sum_REPEAT_VISIT_FLAG"
+          - "REPEAT_VISIT_FLAG"
+        includeInputColumns: "No"
+design:
+  components:
+    CUSTOMER_ORDERS:
+      position:
+        x: -320
+        "y": 0
+      tempMetlId: 1
+    First/Last:
+      position:
+        x: -160
+        "y": 0
+      tempMetlId: 2
+    CUSTOMER_ORDERS 2:
+      position:
+        x: -320
+        "y": 120
+      tempMetlId: 3
+    Join:
+      position:
+        x: 0
+        "y": 0
+      tempMetlId: 4
+    SQL:
+      position:
+        x: 160
+        "y": 0
+      tempMetlId: 5
+    Aggregate:
+      position:
+        x: 320
+        "y": 0
+      tempMetlId: 6
+    Rename:
+      position:
+        x: 480
+        "y": 0
+      tempMetlId: 7
+  notes:
+    "1":
+      position:
+        x: -400
+        "y": -50
+      size:
+        height: 318
+        width: 970
+      theme: "white"
+      content: "FOR EACH ORDER DATE FIND THE TOTAL NUMBER OF NEW & REPEAT CUSTOMERS"

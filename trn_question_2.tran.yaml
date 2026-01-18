@@ -1,0 +1,143 @@
+type: "transformation"
+version: "1.0"
+pipeline:
+  components:
+    EMPLOYEE:
+      type: "table-input"
+      parameters:
+        componentName: "EMPLOYEE"
+        database: "PRACTICE"
+        schema: "PRACTICE_SCHEMA"
+        targetTable: "EMPLOYEE"
+        columnNames:
+        - "EMP_ID"
+        - "EMP_NAME"
+        - "SALARY"
+        - "MANAGER_ID"
+        timeOffset:
+    EMPLOYEE 1:
+      type: "table-input"
+      parameters:
+        componentName: "EMPLOYEE 1"
+        database: "PRACTICE"
+        schema: "PRACTICE_SCHEMA"
+        targetTable: "EMPLOYEE"
+        columnNames:
+        - "EMP_ID"
+        - "EMP_NAME"
+        - "SALARY"
+        - "MANAGER_ID"
+        timeOffset:
+    Join:
+      type: "join"
+      sources:
+      - "EMPLOYEE"
+      - "EMPLOYEE 1"
+      parameters:
+        componentName: "Join"
+        mainTable: "EMPLOYEE"
+        mainTableAlias: "E"
+        joins:
+        - - "EMPLOYEE 1"
+          - "M"
+          - "Left"
+        joinExpressions:
+        - - "\"E\".\"MANAGER_ID\" = \"M\".\"EMP_ID\""
+          - "E_Left_M"
+        columnMappings:
+        - - "E.EMP_ID"
+          - "EMP_ID"
+        - - "E.EMP_NAME"
+          - "EMP_NAME"
+        - - "E.SALARY"
+          - "SALARY"
+        - - "E.MANAGER_ID"
+          - "MANAGER_ID"
+        - - "M.EMP_NAME"
+          - "MAN_NAME"
+        - - "M.SALARY"
+          - "MAN_SALARY"
+    Calculator:
+      type: "calculator"
+      sources:
+      - "Join"
+      parameters:
+        componentName: "Calculator"
+        includeInputColumns: "Yes"
+        calculations:
+        - - "\"SALARY\">\"MAN_SALARY\""
+          - "COMAPARISSION"
+    Filter:
+      type: "filter"
+      sources:
+      - "Calculator"
+      parameters:
+        componentName: "Filter"
+        filterConditions:
+        - - "COMAPARISSION"
+          - "Is"
+          - "Equal to"
+          - "true"
+        combineCondition: "And"
+    Rename:
+      type: "rename"
+      sources:
+      - "Filter"
+      parameters:
+        componentName: "Rename"
+        columnMapping:
+        - - "EMP_ID"
+          - "EMP_ID"
+        - - "EMP_NAME"
+          - "EMP_NAME"
+        - - "SALARY"
+          - "SALARY"
+        - - "MANAGER_ID"
+          - "MANAGER_ID"
+        - - "MAN_NAME"
+          - "MAN_NAME"
+        - - "MAN_SALARY"
+          - "MAN_SALARY"
+        includeInputColumns: "No"
+design:
+  components:
+    EMPLOYEE:
+      position:
+        x: 0
+        "y": 0
+      tempMetlId: 1
+    EMPLOYEE 1:
+      position:
+        x: 0
+        "y": 120
+      tempMetlId: 2
+    Join:
+      position:
+        x: 160
+        "y": 60
+      tempMetlId: 3
+    Calculator:
+      position:
+        x: 320
+        "y": 60
+      tempMetlId: 4
+    Filter:
+      position:
+        x: 480
+        "y": 60
+      tempMetlId: 5
+    Rename:
+      position:
+        x: 640
+        "y": 60
+      tempMetlId: 6
+  notes:
+    "1":
+      position:
+        x: -60
+        "y": -80
+      size:
+        height: 308
+        width: 830
+      theme: "white"
+      content: "Q1. Find employees whose salary is more than their managers"

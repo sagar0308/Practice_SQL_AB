@@ -1,0 +1,188 @@
+type: "transformation"
+version: "1.0"
+pipeline:
+  metadata:
+    description: "Find min & max population in each state."
+  components:
+    CITY_POPULATION:
+      type: "table-input"
+      parameters:
+        componentName: "CITY_POPULATION"
+        database: "PRACTICE"
+        schema: "PRACTICE_SCHEMA"
+        targetTable: "CITY_POPULATION"
+        columnNames:
+        - "STATE"
+        - "CITY"
+        - "POPULATION"
+        timeOffset:
+    Aggregate:
+      type: "aggregate"
+      sources:
+      - "CITY_POPULATION"
+      parameters:
+        componentName: "Aggregate"
+        groupings:
+        - "STATE"
+        aggregations:
+        - - "POPULATION"
+          - "Min"
+        - - "POPULATION"
+          - "Max"
+        groupingType: "Group By"
+    Calculator:
+      type: "calculator"
+      sources:
+      - "Aggregate"
+      parameters:
+        componentName: "Calculator"
+        includeInputColumns: "No"
+        calculations:
+        - - "\"STATE\""
+          - "STATE"
+        - - "\"min_POPULATION\""
+          - "MIN_POPULATION"
+        - - "\"max_POPULATION\""
+          - "MAX_POPULATION"
+    Join:
+      type: "join"
+      sources:
+      - "Calculator"
+      - "CITY_POPULATION 2"
+      parameters:
+        componentName: "Join"
+        mainTable: "CITY_POPULATION 2"
+        mainTableAlias: "CP2"
+        joins:
+        - - "Calculator"
+          - "C1"
+          - "Inner"
+        joinExpressions:
+        - - "\"CP2\".\"STATE\" = \"C1\".\"STATE\""
+          - "CP2_Inner_C1"
+        columnMappings:
+        - - "CP2.STATE"
+          - "STATE"
+        - - "CP2.CITY"
+          - "CITY"
+        - - "CP2.POPULATION"
+          - "POPULATION"
+        - - "C1.MIN_POPULATION"
+          - "MIN_POP"
+        - - "C1.MAX_POPULATION"
+          - "MAX_POP"
+    CITY_POPULATION 2:
+      type: "table-input"
+      parameters:
+        componentName: "CITY_POPULATION 2"
+        database: "PRACTICE"
+        schema: "PRACTICE_SCHEMA"
+        targetTable: "CITY_POPULATION"
+        columnNames:
+        - "STATE"
+        - "CITY"
+        - "POPULATION"
+        timeOffset:
+    SQL:
+      type: "sql"
+      sources:
+      - "Join"
+      parameters:
+        componentName: "SQL"
+        query: "SELECT *,\r\nCASE WHEN POPULATION = MIN_POP THEN CITY END AS MIN_CITY,\r\
+          \nCASE WHEN POPULATION = MAX_POP THEN CITY END AS MAX_CITY\r\nFROM (SELECT\
+          \ \r\n  \"CP2\".\"STATE\" AS \"STATE\", \r\n  \"CP2\".\"CITY\" AS \"CITY\"\
+          , \r\n  \"CP2\".\"POPULATION\" AS \"POPULATION\", \r\n  \"C1\".\"MIN_POPULATION\"\
+          \ AS \"MIN_POP\", \r\n  \"C1\".\"MAX_POPULATION\" AS \"MAX_POP\" \r\nFROM\
+          \ (SELECT \r\n  \"STATE\", \r\n  \"CITY\", \r\n  \"POPULATION\" \r\nFROM\
+          \ \"PRACTICE\".\"PRACTICE_SCHEMA\".\"CITY_POPULATION\") AS \"CP2\" \r\n\
+          \     INNER JOIN \r\n     (SELECT \r\n  \"STATE\"\r\n  AS \"STATE\", \r\n\
+          \  \"min_POPULATION\"\r\n  AS \"MIN_POPULATION\", \r\n  \"max_POPULATION\"\
+          \r\n  AS \"MAX_POPULATION\" \r\nFROM (SELECT \r\n  MIN(\"POPULATION\") AS\
+          \ \"min_POPULATION\", \r\n  MAX(\"POPULATION\") AS \"max_POPULATION\", \r\
+          \n  \"STATE\" \r\nFROM (SELECT \r\n  \"STATE\", \r\n  \"CITY\", \r\n  \"\
+          POPULATION\" \r\nFROM \"PRACTICE\".\"PRACTICE_SCHEMA\".\"CITY_POPULATION\"\
+          ) \r\nGROUP BY (\"STATE\"))) AS \"C1\" \r\n     ON \"CP2\".\"STATE\" = \"\
+          C1\".\"STATE\") T"
+    Aggregate 2:
+      type: "aggregate"
+      sources:
+      - "SQL"
+      parameters:
+        componentName: "Aggregate 2"
+        groupings:
+        - "STATE"
+        aggregations:
+        - - "MIN_CITY"
+          - "Min"
+        - - "MAX_CITY"
+          - "Max"
+        groupingType: "Group By"
+    Rename:
+      type: "rename"
+      sources:
+      - "Aggregate 2"
+      parameters:
+        componentName: "Rename"
+        columnMapping:
+        - - "STATE"
+          - "STATE"
+        - - "min_MIN_CITY"
+          - "MIN_POP_CITY"
+        - - "max_MAX_CITY"
+          - "MAX_POP_CITY"
+        includeInputColumns: "No"
+  variables:
+    Population:
+      metadata:
+        type: "GRID"
+        description: ""
+        scope: "SHARED"
+        visibility: "PUBLIC"
+        columns:
+          Population:
+            columnType: "NUMBER"
+      defaultValue:
+      - - "1"
+design:
+  components:
+    CITY_POPULATION:
+      position:
+        x: 0
+        "y": 0
+      tempMetlId: 1
+    Aggregate:
+      position:
+        x: 160
+        "y": 0
+      tempMetlId: 2
+    Calculator:
+      position:
+        x: 320
+        "y": 0
+      tempMetlId: 3
+    Join:
+      position:
+        x: 480
+        "y": 0
+      tempMetlId: 4
+    CITY_POPULATION 2:
+      position:
+        x: 0
+        "y": 160
+      tempMetlId: 5
+    SQL:
+      position:
+        x: 640
+        "y": 0
+      tempMetlId: 6
+    Aggregate 2:
+      position:
+        x: 800
+        "y": 0
+      tempMetlId: 7
+    Rename:
+      position:
+        x: 960
+        "y": 0
+      tempMetlId: 8

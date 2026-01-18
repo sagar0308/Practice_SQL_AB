@@ -1,0 +1,156 @@
+type: "transformation"
+version: "1.0"
+pipeline:
+  components:
+    ENTRIES:
+      type: "table-input"
+      parameters:
+        componentName: "ENTRIES"
+        database: "PRACTICE"
+        schema: "PRACTICE_SCHEMA"
+        targetTable: "ENTRIES"
+        columnNames:
+        - "NAME"
+        - "ADDRESS"
+        - "EMAIL"
+        - "FLOOR"
+        - "RESOURCES"
+        timeOffset:
+    DISTINCT NAME & RESOURCES:
+      type: "sql"
+      sources:
+      - "ENTRIES"
+      parameters:
+        componentName: "DISTINCT NAME & RESOURCES"
+        query: "SELECT \r\nNAME, LISTAGG(DISTINCT RESOURCES, ',')\r\nFROM ENTRIES\r\
+          \nGROUP BY NAME"
+    TOTAL VISIT COUNT:
+      type: "aggregate"
+      sources:
+      - "ENTRIES"
+      parameters:
+        componentName: "TOTAL VISIT COUNT"
+        groupings:
+        - "NAME"
+        aggregations:
+        - - "FLOOR"
+          - "Count"
+        groupingType: "Group By"
+    Filter:
+      type: "filter"
+      sources:
+      - "RANKING BASED ON NAME FLOOR"
+      parameters:
+        componentName: "Filter"
+        filterConditions:
+        - - "RANKING"
+          - "Is"
+          - "Equal to"
+          - "1"
+        combineCondition: "And"
+    Join:
+      type: "join"
+      sources:
+      - "DISTINCT NAME & RESOURCES"
+      - "TOTAL VISIT COUNT"
+      - "Filter"
+      parameters:
+        componentName: "Join"
+        mainTable: "DISTINCT NAME & RESOURCES"
+        mainTableAlias: "D"
+        joins:
+        - - "TOTAL VISIT COUNT"
+          - "T"
+          - "Left"
+        - - "Filter"
+          - "F"
+          - "Left"
+        joinExpressions:
+        - - "\"D\".\"NAME\" = \"T\".\"NAME\""
+          - "D_Left_T"
+        - - "\"D\".\"NAME\" = \"F\".\"NAME\""
+          - "D_Left_F"
+        columnMappings:
+        - - "D.NAME"
+          - "NAME"
+        - - "T.count_FLOOR"
+          - "TOTAL_NO_OF_VISITS"
+        - - "F.FLOOR"
+          - "MOST_VISITED_FLOOR"
+        - - "D.LISTAGG(DISTINCT RESOURCES, ',')"
+          - "RESOURCES_USED"
+    NAME FLOOR VISE COUNT:
+      type: "aggregate"
+      sources:
+      - "ENTRIES"
+      parameters:
+        componentName: "NAME FLOOR VISE COUNT"
+        groupings:
+        - "NAME"
+        - "FLOOR"
+        aggregations:
+        - - "FLOOR"
+          - "Count"
+        groupingType: "Group By"
+    RANKING BASED ON NAME FLOOR:
+      type: "rank"
+      sources:
+      - "NAME FLOOR VISE COUNT"
+      parameters:
+        componentName: "RANKING BASED ON NAME FLOOR"
+        includeInputColumns: "Yes"
+        partitionData:
+        - "NAME"
+        orderingWithinPartitions:
+        - - "count_FLOOR"
+          - "Descending"
+        functions:
+        - - "Row Number"
+          - "RANKING"
+design:
+  components:
+    ENTRIES:
+      position:
+        x: 0
+        "y": 0
+      tempMetlId: 1
+    DISTINCT NAME & RESOURCES:
+      position:
+        x: 140
+        "y": -110
+      tempMetlId: 3
+    TOTAL VISIT COUNT:
+      position:
+        x: 140
+        "y": 0
+      tempMetlId: 4
+    Filter:
+      position:
+        x: 440
+        "y": 90
+      tempMetlId: 7
+    Join:
+      position:
+        x: 630
+        "y": -10
+      tempMetlId: 8
+    NAME FLOOR VISE COUNT:
+      position:
+        x: 140
+        "y": 90
+      tempMetlId: 5
+    RANKING BASED ON NAME FLOOR:
+      position:
+        x: 280
+        "y": 90
+      tempMetlId: 6
+  notes:
+    "1":
+      position:
+        x: -70
+        "y": -170
+      size:
+        height: 438
+        width: 980
+      theme: "white"
+      content: "DISPLAY NAME, TOTAL_VISITS, MOST_VISITED_FLOOR, RESOURCES_USED"
