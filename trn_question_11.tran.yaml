@@ -1,0 +1,255 @@
+type: "transformation"
+version: "1.0"
+pipeline:
+  components:
+    TRIPS:
+      type: "table-input"
+      parameters:
+        componentName: "TRIPS"
+        database: "PRACTICE"
+        schema: "PRACTICE_SCHEMA"
+        targetTable: "TRIPS"
+        columnNames:
+        - "ID"
+        - "CLIENT_ID"
+        - "DRIVER_ID"
+        - "CITY_ID"
+        - "STATUS"
+        - "REQUEST_AT"
+        timeOffset:
+    USERS:
+      type: "table-input"
+      parameters:
+        componentName: "USERS"
+        database: "PRACTICE"
+        schema: "PRACTICE_SCHEMA"
+        targetTable: "USERS"
+        columnNames:
+        - "USERS_ID"
+        - "BANNED"
+        - "ROLE"
+        timeOffset:
+    Join:
+      type: "join"
+      sources:
+      - "TRIPS"
+      - "USERS"
+      parameters:
+        componentName: "Join"
+        mainTable: "TRIPS"
+        mainTableAlias: "T"
+        joins:
+        - - "USERS"
+          - "U"
+          - "Left"
+        joinExpressions:
+        - - "\"T\".\"CLIENT_ID\" = \"U\".\"USERS_ID\""
+          - "T_Left_U"
+        columnMappings:
+        - - "T.ID"
+          - "ID"
+        - - "T.CLIENT_ID"
+          - "CLIENT_ID"
+        - - "T.DRIVER_ID"
+          - "DRIVER_ID"
+        - - "T.CITY_ID"
+          - "CITY_ID"
+        - - "T.STATUS"
+          - "STATUS"
+        - - "T.REQUEST_AT"
+          - "REQUEST_AT"
+        - - "U.BANNED"
+          - "USER_BANNED_STATUS"
+    Join 2:
+      type: "join"
+      sources:
+      - "Join"
+      - "USERS"
+      parameters:
+        componentName: "Join 2"
+        mainTable: "Join"
+        mainTableAlias: "J"
+        joins:
+        - - "USERS"
+          - "U"
+          - "Left"
+        joinExpressions:
+        - - "\"J\".\"DRIVER_ID\" = \"U\".\"USERS_ID\""
+          - "J_Left_U"
+        columnMappings:
+        - - "J.ID"
+          - "ID"
+        - - "J.CLIENT_ID"
+          - "CLIENT_ID"
+        - - "J.DRIVER_ID"
+          - "DRIVER_ID"
+        - - "J.CITY_ID"
+          - "CITY_ID"
+        - - "J.STATUS"
+          - "STATUS"
+        - - "J.REQUEST_AT"
+          - "REQUEST_AT"
+        - - "J.USER_BANNED_STATUS"
+          - "USER_BANNED_STATUS"
+        - - "U.BANNED"
+          - "DRIVER_BANNED_STATUS"
+    Filter:
+      type: "filter"
+      sources:
+      - "Join 2"
+      parameters:
+        componentName: "Filter"
+        filterConditions:
+        - - "USER_BANNED_STATUS"
+          - "Is"
+          - "Equal to"
+          - "No"
+        - - "DRIVER_BANNED_STATUS"
+          - "Is"
+          - "Equal to"
+          - "No"
+        - - "REQUEST_AT"
+          - "Is"
+          - "Greater than or equal to"
+          - "2013-10-01"
+        - - "REQUEST_AT"
+          - "Is"
+          - "Less than or equal to"
+          - "2013-10-03"
+        combineCondition: "And"
+    Aggregate TOT_REQ_CNT:
+      type: "aggregate"
+      sources:
+      - "Filter"
+      parameters:
+        componentName: "Aggregate TOT_REQ_CNT"
+        groupings:
+        - "REQUEST_AT"
+        aggregations:
+        - - "REQUEST_AT"
+          - "Count"
+        groupingType: "Group By"
+    Filter CANCELLED_RIDE:
+      type: "filter"
+      sources:
+      - "Filter"
+      parameters:
+        componentName: "Filter CANCELLED_RIDE"
+        filterConditions:
+        - - "STATUS"
+          - "Not"
+          - "Equal to"
+          - "completed"
+        combineCondition: "And"
+    Aggregate TOT_CANCELLED_RIDE_CNT:
+      type: "aggregate"
+      sources:
+      - "Filter CANCELLED_RIDE"
+      parameters:
+        componentName: "Aggregate TOT_CANCELLED_RIDE_CNT"
+        groupings:
+        - "REQUEST_AT"
+        aggregations:
+        - - "REQUEST_AT"
+          - "Count"
+        groupingType: "Group By"
+    Join TOT_REQ_AND_TOT_CAN_REQ:
+      type: "join"
+      sources:
+      - "Aggregate TOT_REQ_CNT"
+      - "Aggregate TOT_CANCELLED_RIDE_CNT"
+      parameters:
+        componentName: "Join TOT_REQ_AND_TOT_CAN_REQ"
+        mainTable: "Aggregate TOT_REQ_CNT"
+        mainTableAlias: "TOT"
+        joins:
+        - - "Aggregate TOT_CANCELLED_RIDE_CNT"
+          - "CAN"
+          - "Left"
+        joinExpressions:
+        - - "\"TOT\".\"REQUEST_AT\" = \"CAN\".\"REQUEST_AT\""
+          - "TOT_Left_CAN"
+        columnMappings:
+        - - "TOT.REQUEST_AT"
+          - "TOT_REQUEST_AT"
+        - - "CAN.count_REQUEST_AT"
+          - "CAN_count_REQUEST_AT"
+        - - "TOT.count_REQUEST_AT"
+          - "TOT_count_REQUEST_AT"
+    Calculator CANCELATION_RATE:
+      type: "calculator"
+      sources:
+      - "Join TOT_REQ_AND_TOT_CAN_REQ"
+      parameters:
+        componentName: "Calculator CANCELATION_RATE"
+        includeInputColumns: "Yes"
+        calculations:
+        - - "ROUND(COALESCE(\"CAN_count_REQUEST_AT\",0)/\"TOT_count_REQUEST_AT\",2)\
+            \ *100"
+          - "CANCELATION_RATE"
+design:
+  components:
+    TRIPS:
+      position:
+        x: -280
+        "y": -80
+      tempMetlId: 1
+    USERS:
+      position:
+        x: -280
+        "y": 10
+      tempMetlId: 2
+    Join:
+      position:
+        x: -100
+        "y": -80
+      tempMetlId: 3
+    Join 2:
+      position:
+        x: 60
+        "y": -60
+      tempMetlId: 4
+    Filter:
+      position:
+        x: 220
+        "y": -60
+      tempMetlId: 5
+    Aggregate TOT_REQ_CNT:
+      position:
+        x: 380
+        "y": -60
+      tempMetlId: 6
+    Filter CANCELLED_RIDE:
+      position:
+        x: 380
+        "y": 40
+      tempMetlId: 7
+    Aggregate TOT_CANCELLED_RIDE_CNT:
+      position:
+        x: 540
+        "y": 40
+      tempMetlId: 8
+    Join TOT_REQ_AND_TOT_CAN_REQ:
+      position:
+        x: 700
+        "y": 40
+      tempMetlId: 9
+    Calculator CANCELATION_RATE:
+      position:
+        x: 860
+        "y": 40
+      tempMetlId: 10
+  notes:
+    "1":
+      position:
+        x: -330
+        "y": -230
+      size:
+        height: 428
+        width: 1430
+      theme: "white"
+      content: |-
+        WRITE A SQL QUERY TO FIND THE CANCELLATION RATE OF REQUESTS OF UNBANNED USERS (BOTH CLIENT & DRIVER MUST NOT BE BANNED).
+        FOR EACH DAY BETWEEN 2013-10-01 AND 2013-10-03. ROUND CANCELLATION RATE TO 2 DECIMAL.
+        THE CANCELLATION RATE IS COMPUTED BY DIVIDING THE NUMBER OF CANCELLED (EITHER BY CLIENT OR DRIVER) REQUESTS
+        WITH UNBANNED USERS BY TOTAL NO. OF REQUESTS OF UNBANNED USERS ON THAT DAY.

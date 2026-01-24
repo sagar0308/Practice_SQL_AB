@@ -1,0 +1,145 @@
+type: "transformation"
+version: "1.0"
+pipeline:
+  components:
+    PERSON:
+      type: "table-input"
+      parameters:
+        componentName: "PERSON"
+        database: "PRACTICE"
+        schema: "PRACTICE_SCHEMA"
+        targetTable: "PERSON"
+        columnNames:
+        - "PERSONID"
+        - "NAME"
+        - "SCORE"
+        timeOffset:
+    FRIEND:
+      type: "table-input"
+      parameters:
+        componentName: "FRIEND"
+        database: "PRACTICE"
+        schema: "PRACTICE_SCHEMA"
+        targetTable: "FRIEND"
+        columnNames:
+        - "PID"
+        - "FID"
+        timeOffset:
+    Join:
+      type: "join"
+      sources:
+      - "PERSON"
+      - "FRIEND"
+      parameters:
+        componentName: "Join"
+        mainTable: "FRIEND"
+        mainTableAlias: "F"
+        joins:
+        - - "PERSON"
+          - "P"
+          - "Left"
+        joinExpressions:
+        - - "\"F\".\"FID\" =\"P\".\"PERSONID\""
+          - "F_Left_P"
+        columnMappings:
+        - - "F.PID"
+          - "PID"
+        - - "F.FID"
+          - "FID"
+        - - "P.SCORE"
+          - "FRIEND_SCORE"
+    Aggregate:
+      type: "aggregate"
+      sources:
+      - "Join"
+      parameters:
+        componentName: "Aggregate"
+        groupings:
+        - "PID"
+        aggregations:
+        - - "FID"
+          - "Count"
+        - - "FRIEND_SCORE"
+          - "Sum"
+        groupingType: "Group By"
+    Filter:
+      type: "filter"
+      sources:
+      - "Aggregate"
+      parameters:
+        componentName: "Filter"
+        filterConditions:
+        - - "sum_FRIEND_SCORE"
+          - "Is"
+          - "Greater than"
+          - "100"
+        combineCondition: "And"
+    Join 2:
+      type: "join"
+      sources:
+      - "Filter"
+      - "PERSON"
+      parameters:
+        componentName: "Join 2"
+        mainTable: "Filter"
+        mainTableAlias: "F"
+        joins:
+        - - "PERSON"
+          - "P"
+          - "Left"
+        joinExpressions:
+        - - "\"F\".\"PID\" = \"P\".\"PERSONID\""
+          - "F_Left_P"
+        columnMappings:
+        - - "F.PID"
+          - "PERSONID"
+        - - "P.NAME"
+          - "PERSON_NAME"
+        - - "F.count_FID"
+          - "NO_OF_TOT_FRND"
+        - - "F.sum_FRIEND_SCORE"
+          - "TOT_FRND_SCORE"
+design:
+  components:
+    PERSON:
+      position:
+        x: -220
+        "y": -60
+      tempMetlId: 2
+    FRIEND:
+      position:
+        x: -220
+        "y": 40
+      tempMetlId: 3
+    Join:
+      position:
+        x: -50
+        "y": 0
+      tempMetlId: 4
+    Aggregate:
+      position:
+        x: 100
+        "y": 0
+      tempMetlId: 5
+    Filter:
+      position:
+        x: 250
+        "y": 0
+      tempMetlId: 6
+    Join 2:
+      position:
+        x: 440
+        "y": -50
+      tempMetlId: 7
+  notes:
+    "1":
+      position:
+        x: -310
+        "y": -170
+      size:
+        height: 348
+        width: 1050
+      theme: "white"
+      content: "FIND THOSE PERSON WHOSE ALL FRIENDS HAVE SCORED MORE THAN 100 MARKS.\
+        \ SHOW THE INFORMATION IN THE FORMAT OF PERSONID, NAME, TOT_NO_OF_FRND (WHO\
+        \ SCORED MORE THAN 100 MARKS), TOT_FRND_MARKS"
