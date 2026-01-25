@@ -1,0 +1,121 @@
+type: "transformation"
+version: "1.0"
+pipeline:
+  components:
+    EMP:
+      type: "table-input"
+      parameters:
+        componentName: "EMP"
+        database: "PRACTICE"
+        schema: "PRACTICE_SCHEMA"
+        targetTable: "EMP"
+        columnNames:
+        - "EMP_ID"
+        - "EMP_NAME"
+        - "DEPARTMENT_ID"
+        - "SALARY"
+        - "MANAGER_ID"
+        - "EMP_AGE"
+        timeOffset:
+    Rank:
+      type: "rank"
+      sources:
+      - "EMP"
+      parameters:
+        componentName: "Rank"
+        includeInputColumns: "Yes"
+        partitionData:
+        orderingWithinPartitions:
+        - - "EMP_AGE"
+          - "Ascending"
+        functions:
+        - - "Row Number"
+          - "ASC_AGE"
+    Rank 2:
+      type: "rank"
+      sources:
+      - "Rank"
+      parameters:
+        componentName: "Rank 2"
+        includeInputColumns: "Yes"
+        partitionData:
+        orderingWithinPartitions:
+        - - "EMP_AGE"
+          - "Descending"
+        functions:
+        - - "Row Number"
+          - "DSC_AGE"
+    Calculator:
+      type: "calculator"
+      sources:
+      - "Rank 2"
+      parameters:
+        componentName: "Calculator"
+        includeInputColumns: "Yes"
+        calculations:
+        - - "ABS(\"ASC_AGE\" - \"DSC_AGE\")"
+          - "ABS_DIFF"
+    Filter:
+      type: "filter"
+      sources:
+      - "Calculator"
+      parameters:
+        componentName: "Filter"
+        filterConditions:
+        - - "ABS_DIFF"
+          - "Is"
+          - "Less than or equal to"
+          - "1"
+        combineCondition: "And"
+    Calculator 2:
+      type: "calculator"
+      sources:
+      - "Filter"
+      parameters:
+        componentName: "Calculator 2"
+        includeInputColumns: "No"
+        calculations:
+        - - "ROUND(AVG(\"EMP_AGE\"),2)"
+          - "MEDIAN_AGE"
+design:
+  components:
+    EMP:
+      position:
+        x: 0
+        "y": 0
+      tempMetlId: 1
+    Rank:
+      position:
+        x: 160
+        "y": 0
+      tempMetlId: 2
+    Rank 2:
+      position:
+        x: 320
+        "y": 0
+      tempMetlId: 3
+    Calculator:
+      position:
+        x: 480
+        "y": 0
+      tempMetlId: 4
+    Filter:
+      position:
+        x: 640
+        "y": 0
+      tempMetlId: 5
+    Calculator 2:
+      position:
+        x: 800
+        "y": 0
+      tempMetlId: 6
+  notes:
+    "1":
+      position:
+        x: -20
+        "y": -120
+      size:
+        height: 288
+        width: 910
+      theme: "white"
+      content: "FIND THE MEDIAN AGE OF THE EMP."

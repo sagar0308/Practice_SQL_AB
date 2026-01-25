@@ -184,9 +184,13 @@ pipeline:
         componentName: "Calculator CANCELATION_RATE"
         includeInputColumns: "Yes"
         calculations:
+        - - "COALESCE(\"CAN_count_REQUEST_AT\",0)"
+          - "CAN_count_REQUEST_AT"
+        - - "COALESCE(\"TOT_count_REQUEST_AT\",0)"
+          - "TOT_count_REQUEST_AT"
         - - "ROUND(COALESCE(\"CAN_count_REQUEST_AT\",0)/\"TOT_count_REQUEST_AT\",2)\
             \ *100"
-          - "CANCELATION_RATE"
+          - "CANCELLATION_RATE"
 design:
   components:
     TRIPS:
